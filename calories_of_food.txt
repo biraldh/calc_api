@@ -1,0 +1,39 @@
+
+nutritionix
+Apple
+100g
+52 cal
+
+
+salad
+85g
+20 cal
+
+
+Chicken Breast
+100g
+163 cal
+
+Steak
+221g
+614 cal
+
+Spaghetti
+140g
+210 cal
+
+Baked Beans
+100g
+94 cal
+
+Egg
+100g
+97 cal
+
+fried egg
+46g
+90cal
+
+rice 
+158g
+205 cal
