@@ -138,27 +138,26 @@ def food_calories(food_type):
     else:
         return "Food type not found"
 
+
+
 def calculate_volume_and_weight(area_in_inches2, depth_map, ppi, density):
-    
-    total_volume_in_inches3 = 0
+    # Convert depth map to inches
+    depth_in_inches = depth_map / ppi  # Vectorized operation
 
-    # volume based on depth values
-    for i in range(depth_map.shape[0]):
-        for j in range(depth_map.shape[1]):
-            # Convert depth from pixels to inches
-            depth_in_inches = depth_map[i, j] / ppi  
+    # Compute the per-pixel area in inches²
+    pixel_area_in_inches2 = area_in_inches2 / depth_map.size
 
-            
-            pixel_volume_in_inches3 = depth_in_inches * (area_in_inches2 / depth_map.size) 
-            total_volume_in_inches3 += pixel_volume_in_inches3
+    # Compute volume per pixel and sum it
+    total_volume_in_inches3 = np.sum(depth_in_inches * pixel_area_in_inches2)
 
-    # convert volume from inches³ to cm³ (1 inch³ = 16.387 cm³)
+    # Convert volume from inches³ to cm³
     total_volume_in_cm3 = total_volume_in_inches3 * 16.387
 
-    # calculate the weight in grams
-    weight_in_grams = total_volume_in_cm3 * density  
+    # Calculate the weight in grams
+    weight_in_grams = total_volume_in_cm3 * density
 
     return weight_in_grams
+
 
 def calculate_calories(weight_in_grams, cal, weight):
     cal_per_gram = cal/weight
