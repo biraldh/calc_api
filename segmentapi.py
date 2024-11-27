@@ -3,19 +3,35 @@ from keras.models import load_model
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from torchvision.transforms import Compose, Resize, ToTensor, Normalize
+from tensorflow.keras.applications.resnet import preprocess_input
 from PIL import Image
 import numpy as np
 import os
 import torch
 import cv2
 import math
+from tensorflow.keras import backend as K
+import segmentation_models as sm
 
 
 app = Flask(__name__)
 
+
+def binary_crossentropy_plus_jaccard_loss(y_true, y_pred):
+    bce_loss = K.binary_crossentropy(y_true, y_pred)
+    intersection = K.sum(K.abs(y_true * y_pred), axis=[1, 2, 3])
+    union = K.sum(y_true, axis=[1, 2, 3]) + K.sum(y_pred, axis=[1, 2, 3])
+    jaccard_loss = 1 - intersection / (union - intersection)
+    return bce_loss + jaccard_loss
+
+custom_objects = {
+    'binary_crossentropy_plus_jaccard_loss': binary_crossentropy_plus_jaccard_loss,
+    'iou_score': sm.metrics.iou_score  # if iou_score is required as a metric
+}
+
 # load models
 class_model = tf.keras.models.load_model("E:/Rem/nutritionapp/segmentationmodels/best_model_food_class.h5")
-model = load_model("E:/Rem/nutritionapp/segmentationmodels/best_model.h5")
+model = load_model('E:/Rem/nutritionapp/best_model23.h5', custom_objects=custom_objects)
 model_type = "DPT_Hybrid"  
 midas = torch.hub.load("intel-isl/MiDaS", model_type)
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -24,18 +40,15 @@ midas.eval()
 
 midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms").dpt_transform
 
+
 # Preprocess the image for the model
 def preprocess_image(image, target_size=(128, 128)):
     image = image.resize(target_size)
     image = np.array(image)
-    image = image / 255.0  
+    
+    image = preprocess_input(image) 
     image = np.expand_dims(image, axis=0)  
     return image
-
-
-
-    
-
 
 def food_classify(img):
     img = img.resize((224, 224))  
@@ -164,6 +177,19 @@ def calculate_calories(weight_in_grams, cal, weight):
     calorie = weight_in_grams * cal_per_gram
     return calorie
 
+def save_mask(mask, file_path):
+    # Ensure mask is 2D
+    if len(mask.shape) > 2:
+        mask = np.squeeze(mask, axis=-1)
+
+    # Convert to uint8
+    mask_to_save = (mask * 255).astype(np.uint8)
+
+    # Save using PIL
+    mask_image = Image.fromarray(mask_to_save)
+    mask_image.save(file_path)
+    print(f"Mask saved successfully to {file_path}")
+
 # end point for prediction
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -173,7 +199,7 @@ def predict():
     file = request.files["image"]
     image = Image.open(file).convert("RGB")
 
-    ppi = 71
+    ppi = 93
     food_type = food_classify(image)
 
     density_food = density_get(food_type)
@@ -190,7 +216,7 @@ def predict():
 
     prediction = model.predict(processed_image)
 
-    threshold = float(request.args.get("threshold", 0.012))
+    threshold = float(request.args.get("threshold", 0.01))
     
     predicted_mask = (prediction[0] > threshold).astype(np.uint8)
 
@@ -203,6 +229,28 @@ def predict():
     weight_in_grams = calculate_volume_and_weight(area, depth_map,ppi,density_food)
 
     calorie = calculate_calories(weight_in_grams, food_calorie, weight)
+
+    
+
+    # Debugging the segmentation prediction
+    print("Prediction shape:", prediction[0].shape)
+    print("Prediction values (sample):", prediction[0].flatten()[:10])
+
+    # Debugging the mask
+    print("Predicted mask (sample):", predicted_mask.flatten()[:10])
+    print("Mask non-zero count:", np.count_nonzero(predicted_mask))
+
+    # Debugging the area
+    print("Calculated area in square inches:", area)
+
+    # Debugging the depth map
+    print("Depth map shape:", depth_map.shape)
+    print("Depth map values (sample):", depth_map.flatten()[:10])
+
+    # Debugging volume and weight calculation
+    print("Calculated weight in grams:", weight_in_grams)
+    print("Calculated calories:", calorie)
+    save_mask(predicted_mask, "predicted_mask1.png")
 
     return jsonify({
         "calories" : calorie,
