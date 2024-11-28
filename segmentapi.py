@@ -26,7 +26,7 @@ def binary_crossentropy_plus_jaccard_loss(y_true, y_pred):
 
 custom_objects = {
     'binary_crossentropy_plus_jaccard_loss': binary_crossentropy_plus_jaccard_loss,
-    'iou_score': sm.metrics.iou_score  # if iou_score is required as a metric
+    'iou_score': sm.metrics.iou_score  
 }
 
 # load models
@@ -81,9 +81,8 @@ def estimate_depth(image):
 
 def calculate_mask_area(mask, ppi):
     pixel_area = np.count_nonzero(mask)
-    
     # convert pixel area to real-world area in square inches
-    real_area_in_square_inches = (pixel_area / (ppi ** 2)) * (12 / 10) ** 2
+    real_area_in_square_inches = (pixel_area / (ppi ** 2))
     return real_area_in_square_inches
 
 
@@ -155,7 +154,7 @@ def food_calories(food_type):
 
 def calculate_volume_and_weight(area_in_inches2, depth_map, ppi, density):
     # Convert depth map to inches
-    depth_in_inches = depth_map / ppi  # Vectorized operation
+    depth_in_inches = (depth_map / ppi)
 
     # Compute the per-pixel area in inches²
     pixel_area_in_inches2 = area_in_inches2 / depth_map.size
@@ -186,8 +185,7 @@ def predict():
     
     file = request.files["image"]
     image = Image.open(file).convert("RGB")
-
-    ppi = 93
+    ppi = 67
     food_type = food_classify(image)
 
     density_food = density_get(food_type)
