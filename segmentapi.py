@@ -31,7 +31,7 @@ custom_objects = {
 
 # load models
 class_model = tf.keras.models.load_model("E:/Rem/nutritionapp/segmentationmodels/best_model_food_class.h5")
-model = load_model('E:/Rem/nutritionapp/best_model23.h5', custom_objects=custom_objects)
+model = load_model('E:/Rem/nutritionapp/segmentationmodels/best_model23.h5', custom_objects=custom_objects)
 model_type = "DPT_Hybrid"  
 midas = torch.hub.load("intel-isl/MiDaS", model_type)
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -177,18 +177,6 @@ def calculate_calories(weight_in_grams, cal, weight):
     calorie = weight_in_grams * cal_per_gram
     return calorie
 
-def save_mask(mask, file_path):
-    # Ensure mask is 2D
-    if len(mask.shape) > 2:
-        mask = np.squeeze(mask, axis=-1)
-
-    # Convert to uint8
-    mask_to_save = (mask * 255).astype(np.uint8)
-
-    # Save using PIL
-    mask_image = Image.fromarray(mask_to_save)
-    mask_image.save(file_path)
-    print(f"Mask saved successfully to {file_path}")
 
 # end point for prediction
 @app.route("/predict", methods=["POST"])
@@ -229,28 +217,6 @@ def predict():
     weight_in_grams = calculate_volume_and_weight(area, depth_map,ppi,density_food)
 
     calorie = calculate_calories(weight_in_grams, food_calorie, weight)
-
-    
-
-    # Debugging the segmentation prediction
-    print("Prediction shape:", prediction[0].shape)
-    print("Prediction values (sample):", prediction[0].flatten()[:10])
-
-    # Debugging the mask
-    print("Predicted mask (sample):", predicted_mask.flatten()[:10])
-    print("Mask non-zero count:", np.count_nonzero(predicted_mask))
-
-    # Debugging the area
-    print("Calculated area in square inches:", area)
-
-    # Debugging the depth map
-    print("Depth map shape:", depth_map.shape)
-    print("Depth map values (sample):", depth_map.flatten()[:10])
-
-    # Debugging volume and weight calculation
-    print("Calculated weight in grams:", weight_in_grams)
-    print("Calculated calories:", calorie)
-    save_mask(predicted_mask, "predicted_mask1.png")
 
     return jsonify({
         "calories" : calorie,
